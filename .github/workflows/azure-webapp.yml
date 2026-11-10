@@ -1,0 +1,55 @@
+# Build, test and deploy Relay to Azure App Service (Web App for Containers).
+#
+# Required repository secrets / variables:
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID  (OIDC federated credential, no stored passwords)
+#   vars.AZURE_ACR_NAME     e.g. relayacrxxxx   (output of deploy/azure/main.bicep)
+#   vars.AZURE_WEBAPP_NAME  e.g. relay-xxxx
+name: Deploy to Azure Web App
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm --prefix web ci && npm --prefix web run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Build and push image with ACR Tasks
+        run: |
+          az acr build --registry "${{ vars.AZURE_ACR_NAME }}" \
+            --image relay:${{ github.sha }} --image relay:latest .
+      - name: Deploy image
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          images: ${{ vars.AZURE_ACR_NAME }}.azurecr.io/relay:${{ github.sha }}
+      - name: Wait for health
+        run: |
+          url="https://$(az webapp show -n ${{ vars.AZURE_WEBAPP_NAME }} -g $(az webapp list --query "[?name=='${{ vars.AZURE_WEBAPP_NAME }}'].resourceGroup" -o tsv) --query defaultHostName -o tsv)/health"
+          for i in $(seq 1 30); do curl -fsS "$url" && exit 0; sleep 10; done; exit 1

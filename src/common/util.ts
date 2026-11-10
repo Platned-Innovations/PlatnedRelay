@@ -1,6 +1,6 @@
 import { BadRequestException, PipeTransform } from '@nestjs/common';
 import type { Request } from 'express';
-import { ZodSchema } from 'zod';
+import { z, ZodSchema } from 'zod';
 
 export interface Actor {
   type: 'user' | 'system' | 'apikey';
@@ -91,4 +91,16 @@ export const MASK = '••••••••';
 /** Drops null values (null means "clear" on PATCH but is meaningless on create). */
 export function withoutNulls<T extends Record<string, unknown>>(obj: T): { [K in keyof T]: Exclude<T[K], null> } {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== null)) as any;
+}
+
+/**
+ * PATCH schema: every field optional and defaults removed. (zod 4 applies .default()
+ * inside .partial(), which would silently reset omitted fields such as status.)
+ */
+export function patchSchema<T extends z.ZodRawShape>(schema: z.ZodObject<T>): z.ZodType<Partial<z.infer<z.ZodObject<T>>>> {
+  const shape: Record<string, z.ZodType> = {};
+  for (const [k, v] of Object.entries(schema.shape) as [string, z.ZodType][]) {
+    shape[k] = (v instanceof z.ZodDefault ? (v.unwrap() as z.ZodType) : v).optional();
+  }
+  return z.object(shape) as unknown as z.ZodType<Partial<z.infer<z.ZodObject<T>>>>;
 }

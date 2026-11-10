@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Store } from '../database/store';
 import { C } from '../database/schema';
 import { CryptoService } from '../common/crypto.service';
-import { Actor, withoutNulls, ZodPipe } from '../common/util';
+import { Actor, patchSchema, withoutNulls, ZodPipe } from '../common/util';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/decorators';
 import { CatalogService, ModelRow, ProviderRow } from '../catalog/catalog.service';
@@ -33,7 +33,7 @@ const ModelSchema = z.object({
   capabilities: CapsSchema.default({ tools: true, streaming: true, sampling: true }),
   notes: z.string().max(2000).optional(),
 });
-const UpdateSchema = ModelSchema.omit({ providerId: true }).partial();
+const UpdateSchema = patchSchema(ModelSchema.omit({ providerId: true }));
 
 @Injectable()
 export class ModelsService {

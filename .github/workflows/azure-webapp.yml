@@ -1,14 +1,13 @@
 # Build, test and deploy Relay to Azure App Service (Web App for Containers).
+# Manual only: for a Node.js code Web App use azure-webapp-node.yml instead.
 #
 # Required repository secrets / variables:
 #   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID  (OIDC federated credential, no stored passwords)
 #   vars.AZURE_ACR_NAME     e.g. relayacrxxxx   (output of deploy/azure/main.bicep)
 #   vars.AZURE_WEBAPP_NAME  e.g. relay-xxxx
-name: Deploy to Azure Web App
+name: Deploy to Azure Web App (container)
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

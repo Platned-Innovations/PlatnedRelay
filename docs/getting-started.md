@@ -27,7 +27,7 @@ npm run build                     # builds API (dist/) and admin UI (web/dist)
 npm start                         # reads .env from the working directory
 ```
 
-For development, run `npm run dev` (API with watch) and `npm run dev:web` (Vite on :5173, proxying `/api` and `/v1` to the API; change the target in `web/vite.config.ts` if your API runs on another port).
+For development, run `npm run dev` (API with watch) and `npm run dev:web` (Vite on :5173, proxying `/api` and `/v1` to the API on :8080; set `RELAY_API_URL=http://localhost:<port>` if your API runs elsewhere).
 
 ## First sign-in
 

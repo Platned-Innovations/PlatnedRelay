@@ -41,7 +41,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         if (b.code) code = b.code;
       }
       type = status === 401 ? 'authentication_error' : status === 403 ? 'permission_error' : status === 429 ? 'rate_limit_error' : status >= 500 ? 'api_error' : 'invalid_request_error';
-      if (code === 'internal_error') code = status === 404 ? 'not_found' : status === 413 ? 'payload_too_large' : 'bad_request';
+      if (code === 'internal_error') {
+        const byStatus: Record<number, string> = { 401: 'unauthorized', 403: 'forbidden', 404: 'not_found', 413: 'payload_too_large', 423: 'locked', 429: 'rate_limited' };
+        code = byStatus[status] ?? (status >= 500 ? 'internal_error' : 'bad_request');
+      }
     } else if ((exception as any)?.type === 'entity.parse.failed') {
       status = 400;
       message = 'Malformed JSON body';

@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-const target = 'http://localhost:18090';
+// Relay API for the dev proxy. Override with RELAY_API_URL=http://localhost:<port> npm run dev
+const target = process.env.RELAY_API_URL || 'http://localhost:8080';
 
 export default defineConfig({
   plugins: [react()],

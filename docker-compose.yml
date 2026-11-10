@@ -1,0 +1,54 @@
+# Relay + PostgreSQL.
+#   1. cp .env.example .env  and set RELAY_MASTER_KEY (npm run gen:key) and POSTGRES_PASSWORD
+#   2. docker compose up -d --build
+#   3. docker compose logs relay   -> initial admin credentials are printed once
+# For MongoDB use: docker compose -f docker-compose.mongo.yml up -d --build
+# Add a local model server with: docker compose --profile ollama up -d
+services:
+  relay:
+    build: .
+    image: relay-llm-gateway:latest
+    restart: unless-stopped
+    ports:
+      - "${RELAY_PORT:-8080}:8080"
+    environment:
+      DB_TYPE: postgres
+      DATABASE_URL: postgres://relay:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/relay
+      RELAY_MASTER_KEY: ${RELAY_MASTER_KEY:?set RELAY_MASTER_KEY in .env (npm run gen:key)}
+      RELAY_MASTER_KEY_PREVIOUS: ${RELAY_MASTER_KEY_PREVIOUS:-}
+      RELAY_WORKERS: ${RELAY_WORKERS:-auto}
+      TRUST_PROXY: ${TRUST_PROXY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: relay
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: relay
+    volumes:
+      - relay-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U relay"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    restart: unless-stopped
+    volumes:
+      - relay-ollama:/root/.ollama
+
+volumes:
+  relay-pg:
+  relay-ollama:

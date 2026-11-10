@@ -1,0 +1,13 @@
+node_modules
+web/node_modules
+dist
+web/dist
+.git
+.github
+.env
+.env.*
+*.log
+coverage
+docs
+test
+deploy

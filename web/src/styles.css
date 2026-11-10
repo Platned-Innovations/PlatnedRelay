@@ -1391,9 +1391,16 @@ dl.kv dd {
 .tabs {
   display: flex;
   gap: 2px;
-  border-bottom: 1px solid var(--border);
+  /* Baseline drawn as an inset shadow so the active underline can sit on top of it
+     without overflowing (overflow caused a stray vertical scrollbar). */
+  box-shadow: inset 0 -1px 0 var(--border);
   margin-bottom: 16px;
   overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; /* still scrollable horizontally on narrow screens */
+}
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 .tab {
   padding: 8px 14px;
@@ -1404,7 +1411,7 @@ dl.kv dd {
   color: var(--text-3);
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+  flex-shrink: 0;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;

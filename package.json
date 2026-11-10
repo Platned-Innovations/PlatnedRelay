@@ -4,7 +4,9 @@
   "description": "Relay - Internal LLM Gateway: one secure API in front of local and cloud LLMs with routing, metering, budgets, caching, PII redaction and guardrails.",
   "private": true,
   "license": "SEE LICENSE IN LICENSE",
-  "engines": { "node": ">=20.11" },
+  "engines": {
+    "node": ">=20.11"
+  },
   "scripts": {
     "build": "npm run build:api && npm run build:web",
     "build:api": "nest build",
@@ -41,5 +43,8 @@
     "@types/qrcode": "^1.5.5",
     "typescript": "~5.9.3",
     "vitest": "^3.2.4"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }

@@ -31,6 +31,9 @@ const DETECTORS: Record<PiiEntity, { re: RegExp; validate?: (m: string) => boole
   phone: { re: /(?<![\w+])(?:\+\d{1,3}[\s.-]?)?(?:\(\d{1,4}\)[\s.-]?)?\d{2,4}[\s.-]?\d{3,4}[\s.-]?\d{3,4}(?!\w)/g, validate: (m) => { const d = m.replace(/\D/g, '').length; return d >= 9 && d <= 15; } },
 };
 
+/** Most specific detectors first so generic ones (phone) don't consume card numbers, IBANs, etc. */
+const DETECTION_ORDER: PiiEntity[] = ['secret', 'email', 'credit_card', 'iban', 'ssn', 'ip_address', 'phone'];
+
 const INJECTION_PATTERNS: RegExp[] = [
   /\bignore\s+(?:all\s+|any\s+)?(?:the\s+)?(?:previous|prior|above|earlier)\s+(?:instructions|prompts|rules|messages)/i,
   /\bdisregard\s+(?:all\s+|the\s+)?(?:previous|prior|above|system)\s+(?:instructions|prompt|rules)/i,
@@ -104,7 +107,7 @@ export function redactPii(text: string, entities: Set<PiiEntity>, vault?: Map<st
   let out = text;
   let count = 0;
   const found = new Set<PiiEntity>();
-  for (const entity of PII_ENTITIES) {
+  for (const entity of DETECTION_ORDER) {
     if (!entities.has(entity)) continue;
     const { re, validate } = DETECTORS[entity];
     out = out.replace(re, (m) => {

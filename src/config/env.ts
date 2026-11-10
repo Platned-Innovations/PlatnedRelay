@@ -1,3 +1,6 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
 /**
  * Minimal environment configuration. Only things that MUST exist before the
  * database is reachable live here; everything else is stored in the DB and
@@ -31,8 +34,21 @@ function decodeKey(name: string, value: string | undefined, required: boolean): 
 
 let cached: RelayEnv | undefined;
 
+/**
+ * Local development convenience: load ./.env if present. Variables already set in
+ * the real environment (Docker, Azure App Settings, Key Vault references) win.
+ */
+function loadDotEnv() {
+  const file = path.resolve(process.cwd(), '.env');
+  if (!fs.existsSync(file)) return;
+  const before = { ...process.env };
+  process.loadEnvFile(file);
+  for (const [k, v] of Object.entries(before)) if (v !== undefined) process.env[k] = v;
+}
+
 export function loadEnv(): RelayEnv {
   if (cached) return cached;
+  loadDotEnv();
   const dbType = (process.env.DB_TYPE || 'postgres').toLowerCase();
   if (dbType !== 'postgres' && dbType !== 'mongodb') throw new Error('DB_TYPE must be "postgres" or "mongodb"');
   const databaseUrl = process.env.DATABASE_URL;

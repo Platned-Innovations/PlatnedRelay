@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 20.11+ (22 recommended) **or** Docker
+- Node.js 20.12+ (22 recommended) **or** Docker
 - PostgreSQL 13+ **or** MongoDB 6+ (5.0+ works; `$dateTrunc` is required for reports)
 
 ## Option A: Docker (fastest)
@@ -24,8 +24,7 @@ npm install
 npm --prefix web install
 cp .env.example .env              # set DB_TYPE, DATABASE_URL, RELAY_MASTER_KEY
 npm run build                     # builds API (dist/) and admin UI (web/dist)
-set -a; . ./.env; set +a          # load the .env into the shell (PowerShell: set the variables manually)
-npm start
+npm start                         # reads .env from the working directory
 ```
 
 For development, run `npm run dev` (API with watch) and `npm run dev:web` (Vite on :5173, proxying `/api` and `/v1` to the API; change the target in `web/vite.config.ts` if your API runs on another port).

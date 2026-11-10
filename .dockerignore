@@ -8,6 +8,5 @@ web/dist
 .env.*
 *.log
 coverage
-docs
 test
 deploy

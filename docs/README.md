@@ -13,7 +13,7 @@ Relay is the internal LLM gateway: a single, secure, OpenAI-compatible API in fr
 | [Architecture](architecture.md) | Engineers | Components, request pipeline, data model, database abstraction |
 | [Scaling & performance](scaling.md) | Operators | Concurrency model, horizontal scaling, tuning |
 | [Deploy with Docker](deployment-docker.md) | Operators | Image, compose files, PostgreSQL or MongoDB |
-| [Deploy to Azure Web App](deployment-azure.md) | Operators | Bicep, Key Vault references, CI/CD, scaling, networking |
+| [Deploy to Azure Web App](deployment-azure.md) | Operators | Node.js code deployment or containers, Web App settings, GitHub workflow, Key Vault references, Bicep, scaling, networking |
 | [Operations](operations.md) | Operators | Health checks, backups, retention, monitoring, troubleshooting |
 | [Admin API reference](admin-api.md) | Engineers | Every `/api/admin` endpoint |
 | [Roadmap & market comparison](roadmap.md) | Product owners | How Relay compares with LiteLLM, Portkey, Helicone, Kong/Cloudflare AI gateways and what to build next |

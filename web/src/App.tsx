@@ -28,6 +28,7 @@ const Notifications = lazy(() => import('./pages/Notifications'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Playground = lazy(() => import('./pages/Playground'));
+const Docs = lazy(() => import('./pages/Docs'));
 
 /** Connects API-level auth failures to router navigation. */
 function AuthBridge() {
@@ -69,6 +70,8 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/invite/:token" element={<Invite />} />
+            <Route path="/docs" element={<Docs />} />
+            <Route path="/docs/:slug" element={<Docs />} />
             <Route
               path="/change-password"
               element={

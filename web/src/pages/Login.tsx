@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Zap } from 'lucide-react';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
@@ -117,6 +117,9 @@ export default function Login() {
           </button>
         )}
       </form>
+      <p className="muted" style={{ marginTop: 16, fontSize: 13, textAlign: "center" }}>
+        Integrating an app? <Link to="/docs/api">Read the documentation</Link>
+      </p>
     </AuthShell>
   );
 }

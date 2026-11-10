@@ -3,19 +3,19 @@ import { z } from 'zod';
 import { Store } from '../database/store';
 import { C } from '../database/schema';
 import { CryptoService } from '../common/crypto.service';
-import { Actor, slugify, ZodPipe } from '../common/util';
+import { Actor, slugify, withoutNulls, ZodPipe } from '../common/util';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/decorators';
 import { AppRow, CatalogService, EntityRow } from '../catalog/catalog.service';
 
 const AppSettingsSchema = z.object({
   cacheEnabled: z.boolean().optional(),
-  cacheTtlSeconds: z.number().int().min(1).max(30 * 86400).optional(),
-  logBodies: z.boolean().optional(),
+  cacheTtlSeconds: z.number().int().min(1).max(30 * 86400).nullable().optional(),
+  logBodies: z.boolean().nullable().optional(),
   guardrailPolicyIds: z.array(z.string()).max(20).optional(),
   allowedModelIds: z.array(z.string()).max(500).optional(),
-  defaultModel: z.string().max(200).optional(),
-  rpm: z.number().int().min(0).max(1_000_000).optional(),
+  defaultModel: z.string().max(200).nullable().optional(),
+  rpm: z.number().int().min(0).max(1_000_000).nullable().optional(),
 });
 const AppSchema = z.object({
   name: z.string().min(1).max(100),
@@ -54,7 +54,7 @@ export class AppsService {
   async createApp(input: z.infer<typeof AppSchema>, actor: Actor) {
     const slug = slugify(input.slug || input.name).replace(/[/.]/g, '-');
     if (await this.store.findOne(C.apps, { slug })) throw new BadRequestException(`App "${slug}" already exists`);
-    const row: AppRow = { id: CryptoService.id(), ...input, ownerEmail: input.ownerEmail || undefined, slug, createdAt: new Date(), updatedAt: new Date() };
+    const row: AppRow = { id: CryptoService.id(), ...input, settings: withoutNulls(input.settings), ownerEmail: input.ownerEmail || undefined, slug, createdAt: new Date(), updatedAt: new Date() };
     await this.store.insert(C.apps, row);
     this.catalog.invalidate();
     await this.audit.log(actor, { action: 'app.created', resourceType: 'app', resourceId: row.id, details: { name: row.name, slug } });
@@ -66,7 +66,8 @@ export class AppsService {
     if (!app) throw new NotFoundException('App not found');
     const patch: Record<string, unknown> = { ...input, updatedAt: new Date() };
     delete patch.slug;
-    if (input.settings) patch.settings = { ...(app.settings ?? {}), ...input.settings };
+    // null clears a setting so it inherits the global default again
+    if (input.settings) patch.settings = Object.fromEntries(Object.entries({ ...(app.settings ?? {}), ...input.settings }).filter(([, v]) => v !== null));
     const updated = await this.store.update<AppRow>(C.apps, id, patch);
     this.catalog.invalidate();
     await this.audit.log(actor, { action: 'app.updated', resourceType: 'app', resourceId: id, details: { before: app, after: input } });

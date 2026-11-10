@@ -5,7 +5,7 @@ import { C } from '../database/schema';
 import { CryptoService } from '../common/crypto.service';
 import { Actor, ZodPipe } from '../common/util';
 import { AuditService } from '../audit/audit.service';
-import { CurrentActor } from '../auth/decorators';
+import { CurrentActor, MinRole } from '../auth/decorators';
 import { BudgetRow, CatalogService, GuardrailRow, RouteRow } from '../catalog/catalog.service';
 import { checkInput, mergePolicies, PII_ENTITIES } from '../guardrails/engine';
 import { BudgetsService } from '../gateway/budgets.service';
@@ -146,7 +146,7 @@ export class PoliciesController {
   @Get('guardrails-meta') meta() { return { piiEntities: PII_ENTITIES }; }
   @Post('guardrails') createGuardrail(@Body(new ZodPipe(GuardrailSchema)) b: z.infer<typeof GuardrailSchema>, @CurrentActor() a: Actor) { return this.svc.saveGuardrail(undefined, b, a); }
   @Patch('guardrails/:id') updateGuardrail(@Param('id') id: string, @Body(new ZodPipe(GuardrailSchema)) b: z.infer<typeof GuardrailSchema>, @CurrentActor() a: Actor) { return this.svc.saveGuardrail(id, b, a); }
-  @Post('guardrails/:id/test') testGuardrail(@Param('id') id: string, @Body() b: { text?: string }) { return this.svc.testGuardrail(id, String(b?.text ?? '').slice(0, 20000)); }
+  @MinRole('viewer') @Post('guardrails/:id/test') testGuardrail(@Param('id') id: string, @Body() b: { text?: string }) { return this.svc.testGuardrail(id, String(b?.text ?? '').slice(0, 20000)); }
 
   @Get('budgets') budgets() { return this.svc.listBudgets(); }
   @Post('budgets') createBudget(@Body(new ZodPipe(BudgetSchema)) b: z.infer<typeof BudgetSchema>, @CurrentActor() a: Actor) { return this.svc.saveBudget(undefined, b, a); }

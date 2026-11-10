@@ -87,3 +87,8 @@ export function sleep(ms: number) {
 }
 
 export const MASK = '••••••••';
+
+/** Drops null values (null means "clear" on PATCH but is meaningless on create). */
+export function withoutNulls<T extends Record<string, unknown>>(obj: T): { [K in keyof T]: Exclude<T[K], null> } {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== null)) as any;
+}

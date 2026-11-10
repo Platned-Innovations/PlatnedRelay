@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Store } from '../database/store';
 import { C } from '../database/schema';
 import { CryptoService } from '../common/crypto.service';
-import { Actor, ZodPipe } from '../common/util';
+import { Actor, withoutNulls, ZodPipe } from '../common/util';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/decorators';
 import { CatalogService, ModelRow, ProviderRow } from '../catalog/catalog.service';
@@ -27,8 +27,8 @@ const ModelSchema = z.object({
   type: z.enum(['chat', 'embedding']).default('chat'),
   tier: z.enum(['cheap', 'standard', 'strong']).default('standard'),
   status: z.enum(['active', 'disabled']).default('active'),
-  contextWindow: z.number().int().positive().optional(),
-  maxOutputTokens: z.number().int().positive().optional(),
+  contextWindow: z.number().int().positive().nullable().optional(),
+  maxOutputTokens: z.number().int().positive().nullable().optional(),
   pricing: PricingSchema,
   capabilities: CapsSchema.default({ tools: true, streaming: true, sampling: true }),
   notes: z.string().max(2000).optional(),
@@ -51,7 +51,7 @@ export class ModelsService {
     const slug = (input.slug || `${provider.slug}/${input.providerModelId}`).toLowerCase();
     if (await this.store.findOne(C.models, { slug })) throw new BadRequestException(`Model slug "${slug}" already exists`);
     if (await this.store.findOne(C.routes, { slug })) throw new BadRequestException(`"${slug}" is already used by a route`);
-    const row: ModelRow = { id: CryptoService.id(), ...input, slug, createdAt: new Date(), updatedAt: new Date() };
+    const row: ModelRow = { id: CryptoService.id(), ...withoutNulls(input), slug, createdAt: new Date(), updatedAt: new Date() };
     await this.store.insert(C.models, row);
     await this.store.insert(C.pricingHistory, { id: CryptoService.id(), modelId: row.id, pricing: row.pricing, changedBy: actor.name, createdAt: new Date() });
     this.catalog.invalidate();

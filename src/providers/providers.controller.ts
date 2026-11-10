@@ -20,8 +20,8 @@ const ProviderSchema = z.object({
   /** JSON object of secret headers, e.g. {"X-Tenant-Token":"..."} */
   secretHeaders: z.string().max(8000).optional(),
   config: z.record(z.string(), z.any()).default({}),
-  timeoutMs: z.number().int().min(1000).max(900_000).optional(),
-  maxRetries: z.number().int().min(0).max(5).optional(),
+  timeoutMs: z.number().int().min(1000).max(900_000).nullable().optional(),
+  maxRetries: z.number().int().min(0).max(5).nullable().optional(),
   status: z.enum(['active', 'disabled']).default('active'),
   importPresetModels: z.boolean().default(true),
 });
@@ -77,7 +77,7 @@ export class ProvidersService {
       id, name: input.name, slug, type: input.type, presetId: input.presetId, baseUrl: input.baseUrl.replace(/\/$/, ''),
       config: { ...(presetById(input.presetId)?.config ?? {}), ...input.config }, status: input.status,
       secretsEnc: Object.keys(secrets).length ? this.crypto.encryptJson(secrets, this.ctx(id)) : undefined,
-      timeoutMs: input.timeoutMs, maxRetries: input.maxRetries, createdAt: new Date(), updatedAt: new Date(),
+      timeoutMs: input.timeoutMs ?? undefined, maxRetries: input.maxRetries ?? undefined, createdAt: new Date(), updatedAt: new Date(),
     };
     await this.store.insert(C.providers, { ...row, createdBy: actor.id } as any);
     let imported = 0;

@@ -82,7 +82,9 @@ export class KeysService {
     const filter: Record<string, unknown> = {};
     if (f.appId) filter.appId = f.appId;
     if (f.entityId) filter.entityId = f.entityId;
-    if (f.status) filter.status = f.status;
+    if (f.status === 'expired') Object.assign(filter, { expiresAt: { $lte: new Date() }, status: { $ne: 'revoked' } });
+    else if (f.status === 'active') Object.assign(filter, { status: 'active', $and: [{ $or: [{ expiresAt: { $exists: false } }, { expiresAt: { $gt: new Date() } }] }] });
+    else if (f.status) filter.status = f.status;
     if (f.q) filter.$or = [{ name: { $ilike: f.q } }, { prefix: { $ilike: f.q } }];
     const [keys, snap, spend] = await Promise.all([
       this.store.find<ApiKeyRow>(C.apiKeys, filter, { sort: { createdAt: -1 }, limit: 2000 }),

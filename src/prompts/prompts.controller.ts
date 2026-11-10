@@ -5,7 +5,7 @@ import { C } from '../database/schema';
 import { CryptoService } from '../common/crypto.service';
 import { Actor, ZodPipe } from '../common/util';
 import { AuditService } from '../audit/audit.service';
-import { CurrentActor } from '../auth/decorators';
+import { CurrentActor, MinRole } from '../auth/decorators';
 import { ChatMessage } from '../gateway/types';
 
 export interface PromptTemplate {
@@ -156,7 +156,7 @@ export class PromptsController {
   @Patch(':id') update(@Param('id') id: string, @Body(new ZodPipe(z.object({ name: z.string().max(200).optional(), description: z.string().max(2000).optional() }))) b: { name?: string; description?: string }, @CurrentActor() a: Actor) { return this.prompts.update(id, b, a); }
   @Post(':id/versions') addVersion(@Param('id') id: string, @Body(new ZodPipe(VersionSchema)) b: z.infer<typeof VersionSchema>, @CurrentActor() a: Actor) { return this.prompts.addVersion(id, b, a); }
   @Post(':id/labels') setLabel(@Param('id') id: string, @Body(new ZodPipe(LabelSchema)) b: z.infer<typeof LabelSchema>, @CurrentActor() a: Actor) { return this.prompts.setLabel(id, b, a); }
-  @Post(':id/render') render(@Param('id') id: string, @Body() b: { version?: number; label?: string; variables?: Record<string, unknown> }) {
+  @MinRole('viewer') @Post(':id/render') render(@Param('id') id: string, @Body() b: { version?: number; label?: string; variables?: Record<string, unknown> }) {
     return this.prompts.resolve({ id, version: b?.version, label: b?.label }).then((r) => ({ version: r.version.version, messages: renderPrompt(r.version.template, b?.variables ?? {}) }));
   }
 }

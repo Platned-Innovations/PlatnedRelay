@@ -47,8 +47,7 @@ Restore test: restore into a new database, start Relay with the same master key,
 | `502 upstream_error` | Provider test connection; provider status; credentials (upstream 401/403 are reported as 502 to clients). |
 | Streaming stalls behind a proxy | Disable proxy buffering, increase read timeouts. |
 | Usage missing on dashboard | Records are flushed every second; check logs for "Flush failed". |
-| Initial credentials lost | On a brand-new DB only: drop the DB and restart. Otherwise another owner can issue a reset link (Users → Reset access). |
-| Locked out completely (no owner can sign in) | With DB access: set `lockedUntil`/`failedLogins` to null/0 for the user; or create a new empty database, restart to get a new owner, and re-import configuration. |
+| Initial credentials lost / owner locked out | On the server: `npm run admin -- list` then `npm run admin -- reset [username]` (new one-time password, unlocks the account, revokes sessions, audited). In Docker: `docker compose exec relay node dist/cli.js reset`. |
 
 ## Upgrades
 

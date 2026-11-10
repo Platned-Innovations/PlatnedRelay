@@ -12,6 +12,7 @@
     "build:api": "nest build",
     "build:web": "npm --prefix web run build",
     "start": "node dist/main.js",
+    "admin": "node dist/cli.js",
     "dev": "nest start --watch",
     "dev:web": "npm --prefix web run dev",
     "test": "vitest run",

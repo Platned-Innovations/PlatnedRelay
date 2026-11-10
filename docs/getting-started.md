@@ -41,6 +41,8 @@ When Relay connects to an empty database it creates an **owner** account with a 
     Password: 7v#P...
 ```
 
+Missed the banner? Run `npm run admin -- reset` (or `docker compose exec relay node dist/cli.js reset`) to issue a new one-time password.
+
 1. Sign in. You will be forced to change the password.
 2. Go to **Users**, edit your account and set your real email address.
 3. Go to **Profile** and enable MFA (recommended; can be made mandatory under Settings → Security).

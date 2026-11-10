@@ -1,0 +1,90 @@
+# Build, test and deploy Relay to an Azure Web App (Linux, Node.js runtime — code deployment).
+#
+# One-time setup:
+#   1. Repository variable  AZURE_WEBAPP_NAME   = your Web App name (e.g. platnedrelay)
+#   2. Repository secret    AZURE_WEBAPP_PUBLISH_PROFILE = contents of the publish profile
+#      (Azure portal → Web App → Overview → Download publish profile; requires
+#       "SCM Basic Auth Publishing Credentials" = On under Configuration → General settings).
+#      Prefer OIDC? Replace the publish-profile input with an azure/login@v2 step (see docs/deployment-azure.md).
+#   3. Web App configuration (see docs/deployment-azure.md):
+#      Startup command: node dist/main.js
+#      App settings:    SCM_DO_BUILD_DURING_DEPLOYMENT=false, NODE_ENV=production, TRUST_PROXY=1,
+#                       RELAY_WORKERS=auto, DB_TYPE, DATABASE_URL, RELAY_MASTER_KEY (Key Vault references)
+#      Health check:    /health
+name: Deploy to Azure Web App (Node)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: azure-webapp-node
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+
+      - name: Install dependencies (API + admin UI)
+        run: |
+          npm ci --no-audit --no-fund
+          npm --prefix web ci --no-audit --no-fund
+
+      - name: Typecheck and unit tests
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Build API and admin UI
+        run: npm run build
+
+      - name: Create deployment package (production dependencies only)
+        run: |
+          npm prune --omit=dev --no-audit --no-fund
+          zip -qr relay.zip package.json package-lock.json dist web/dist node_modules
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: relay
+          path: relay.zip
+          retention-days: 7
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: relay
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: relay.zip
+
+      - name: Wait for /health
+        run: |
+          url="https://${{ vars.AZURE_WEBAPP_NAME }}.azurewebsites.net/health"
+          for i in $(seq 1 30); do
+            if curl -fsS "$url"; then echo; exit 0; fi
+            sleep 10
+          done
+          echo "Relay did not become healthy at $url" >&2
+          exit 1

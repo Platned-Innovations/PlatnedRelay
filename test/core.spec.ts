@@ -192,3 +192,14 @@ describe('utilities', () => {
     expect(canonicalJson({ b: 1, a: { d: 2, c: [1, { y: 1, x: 2 }] } })).toBe(canonicalJson({ a: { c: [1, { x: 2, y: 1 }], d: 2 }, b: 1 }));
   });
 });
+
+describe('validation helpers', () => {
+  it('patch schemas do not inject defaults for omitted fields', async () => {
+    const { z } = await import('zod');
+    const { patchSchema } = await import('../src/common/util');
+    const S = z.object({ name: z.string(), status: z.enum(['active', 'disabled']).default('active'), tags: z.array(z.string()).default([]) });
+    expect(patchSchema(S).parse({ name: 'x' })).toEqual({ name: 'x' });
+    expect(patchSchema(S).parse({ status: 'disabled' })).toEqual({ status: 'disabled' });
+    expect(patchSchema(S).safeParse({ status: 'bogus' }).success).toBe(false);
+  });
+});

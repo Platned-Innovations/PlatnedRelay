@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Store } from '../database/store';
 import { C } from '../database/schema';
 import { CryptoService } from '../common/crypto.service';
-import { Actor, slugify, withoutNulls, ZodPipe } from '../common/util';
+import { Actor, patchSchema, slugify, withoutNulls, ZodPipe } from '../common/util';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/decorators';
 import { AppRow, CatalogService, EntityRow } from '../catalog/catalog.service';
@@ -111,7 +111,7 @@ export class AppsController {
   }
 
   @Patch('apps/:id')
-  update(@Param('id') id: string, @Body(new ZodPipe(AppSchema.partial())) body: Partial<z.infer<typeof AppSchema>>, @CurrentActor() actor: Actor) {
+  update(@Param('id') id: string, @Body(new ZodPipe(patchSchema(AppSchema))) body: Partial<z.infer<typeof AppSchema>>, @CurrentActor() actor: Actor) {
     return this.apps.updateApp(id, body, actor);
   }
 
@@ -126,7 +126,7 @@ export class AppsController {
   }
 
   @Patch('entities/:id')
-  updateEntity(@Param('id') id: string, @Body(new ZodPipe(EntitySchema.partial())) body: Partial<z.infer<typeof EntitySchema>>, @CurrentActor() actor: Actor) {
+  updateEntity(@Param('id') id: string, @Body(new ZodPipe(patchSchema(EntitySchema))) body: Partial<z.infer<typeof EntitySchema>>, @CurrentActor() actor: Actor) {
     return this.apps.updateEntity(id, body, actor);
   }
 }

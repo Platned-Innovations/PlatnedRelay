@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Store } from '../database/store';
 import { C } from '../database/schema';
 import { CryptoService } from '../common/crypto.service';
-import { Actor, MASK, slugify, ZodPipe } from '../common/util';
+import { Actor, MASK, patchSchema, slugify, ZodPipe } from '../common/util';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/decorators';
 import { CatalogService, ModelRow, ProviderRow } from '../catalog/catalog.service';
@@ -25,7 +25,7 @@ const ProviderSchema = z.object({
   status: z.enum(['active', 'disabled']).default('active'),
   importPresetModels: z.boolean().default(true),
 });
-const UpdateSchema = ProviderSchema.omit({ importPresetModels: true, presetId: true }).partial();
+const UpdateSchema = patchSchema(ProviderSchema.omit({ importPresetModels: true, presetId: true }));
 
 @Injectable()
 export class ProvidersService {

@@ -8,6 +8,7 @@ import { Alert, Badge, CodeBlock, ErrorState, FormField, KV, Loading, PageHeader
 import { DataTable, Pager, type Column } from '../components/DataTable';
 import { Drawer } from '../components/Modal';
 import { DateRangePicker, presetRange, type DateRange } from '../components/DateRangePicker';
+import { LiveToggle, useLiveMode, useNewRowKeys } from '../components/Live';
 import { fmtDateTimeSec, fmtMs, fmtNum, fmtUsd } from '../format';
 
 function LogDrawer({ row, onClose }: { row: UsageLog | null; onClose: () => void }) {
@@ -97,9 +98,13 @@ export default function Requests() {
   const models = useModels();
   const keys = useApi<ApiKey[]>('/api/admin/keys', { cached: true });
 
-  useEffect(() => setPage(1), [range, f, q, pageSize]);
+  // Reset paging when the user changes the range (not when live mode slides it forward).
+  const rangeKey = range.preset === 'custom' ? `${range.from}|${range.to}` : range.preset;
+  useEffect(() => setPage(1), [rangeKey, f, q, pageSize]);
   const filterQs = qs({ from: range.from, to: range.to, ...f, q });
   const { data, error, loading, reload } = useApi<Paged<UsageLog>>(`/api/admin/analytics/logs${qs({ from: range.from, to: range.to, ...f, q, page, pageSize })}`);
+  const live = useLiveMode('requests', () => (range.preset === 'custom' ? reload() : setRange(presetRange(range.preset as '24h'))));
+  const fresh = useNewRowKeys(data?.rows, (r) => r.id, live.on, JSON.stringify([rangeKey, f, q, page, pageSize]));
 
   const columns: Column<UsageLog>[] = [
     { key: 'ts', header: 'Time', render: (r) => <span className="nowrap">{fmtDateTimeSec(r.ts)}</span> },
@@ -141,9 +146,12 @@ export default function Requests() {
         title="Requests"
         subtitle="Every gateway call with tokens, cost and latency. Click a row for full details."
         actions={
-          <a className="btn" href={`/api/admin/analytics/logs.csv${filterQs}`} download title="Exports up to 500 most recent matching rows">
-            <Download size={14} /> Export CSV
-          </a>
+          <>
+            <LiveToggle live={live} />
+            <a className="btn" href={`/api/admin/analytics/logs.csv${filterQs}`} download title="Exports up to 500 most recent matching rows">
+              <Download size={14} /> Export CSV
+            </a>
+          </>
         }
       />
       <div className="card mb-2">
@@ -170,13 +178,14 @@ export default function Requests() {
         </div>
       </div>
       <div className="card">
-        {error ? (
+        {error && !data ? (
           <ErrorState error={error} onRetry={reload} />
         ) : !data ? (
           <Loading />
         ) : (
-          <div style={{ opacity: loading ? 0.6 : 1 }}>
-            <DataTable columns={columns} rows={data.rows} rowKey={(r) => r.id} onRowClick={setSel} selectedKey={sel?.id} emptyTitle="No requests match these filters" compact />
+          <div style={{ opacity: loading && !live.on ? 0.6 : 1 }}>
+            {error ? <Alert tone="warning" title="Live refresh failed; showing the last results." /> : null}
+            <DataTable columns={columns} rows={data.rows} rowKey={(r) => r.id} onRowClick={setSel} selectedKey={sel?.id} highlightKeys={fresh} emptyTitle="No requests match these filters" compact />
             <div className="row between" style={{ borderTop: '1px solid var(--border)', gap: 0 }}>
               <Pager page={data.page} pageSize={data.pageSize} total={data.total} onPage={setPage} />
               <label className="row small muted" style={{ paddingRight: 14 }}>

@@ -29,6 +29,7 @@ export function DataTable<T>({
   compact,
   selectedKey,
   showFooter,
+  highlightKeys,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -40,6 +41,8 @@ export function DataTable<T>({
   compact?: boolean;
   selectedKey?: string | null;
   showFooter?: boolean;
+  /** Rows to flash briefly (e.g. new rows in live mode). */
+  highlightKeys?: Set<string>;
 }) {
   const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(initialSort ?? null);
 
@@ -107,7 +110,7 @@ export function DataTable<T>({
               return (
                 <tr
                   key={k}
-                  className={[onRowClick ? 'clickable' : '', selectedKey === k ? 'selected' : ''].filter(Boolean).join(' ') || undefined}
+                  className={[onRowClick ? 'clickable' : '', selectedKey === k ? 'selected' : '', highlightKeys?.has(k) ? 'row-new' : ''].filter(Boolean).join(' ') || undefined}
                   onClick={onRowClick ? () => onRowClick(r) : undefined}
                 >
                   {columns.map((c) => (

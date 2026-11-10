@@ -103,6 +103,12 @@ export class CatalogService {
     return this.reload();
   }
 
+  /** Forces a fresh load on this process (single-flight). Used when a request references config this snapshot hasn't seen yet. */
+  async refresh(): Promise<Snapshot> {
+    this.dirty = false;
+    return this.reload();
+  }
+
   /** Configuration changed: every worker reloads before serving its next request. */
   invalidate() {
     bus.publish('catalog.invalidate');

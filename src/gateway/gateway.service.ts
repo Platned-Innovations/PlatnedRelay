@@ -105,7 +105,10 @@ export class GatewayService {
     if (key.status === 'revoked') throw fail('API key has been revoked');
     if (key.status !== 'active') throw fail('API key is inactive');
     if (key.expiresAt && new Date(key.expiresAt) <= new Date()) throw fail('API key has expired');
-    const snap = await this.catalog.snapshot();
+    let snap = await this.catalog.snapshot();
+    // A key can reference an app/entity created moments ago (possibly on another instance)
+    // that this process's cached snapshot doesn't contain yet: reload once before deciding.
+    if (!snap.apps.has(key.appId) || !snap.entities.has(key.entityId)) snap = await this.catalog.refresh();
     const app = snap.apps.get(key.appId);
     const entity = snap.entities.get(key.entityId);
     if (!app || app.status !== 'active') throw fail('The application for this key is disabled', 403, 'app_disabled');

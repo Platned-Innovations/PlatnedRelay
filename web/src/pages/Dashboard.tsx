@@ -4,8 +4,9 @@ import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Clock, Coins, Da
 import { qs } from '../api';
 import { useApi, useApps } from '../hooks';
 import type { Overview, TopRow } from '../types';
-import { Card, ErrorState, Loading, PageHeader, StatCard, Tabs, Empty } from '../components/ui';
+import { Alert, Card, ErrorState, Loading, PageHeader, StatCard, Tabs, Empty } from '../components/ui';
 import { DateRangePicker, presetRange, type DateRange } from '../components/DateRangePicker';
+import { LiveToggle, useLiveMode } from '../components/Live';
 import { RankBarChart, TimeAreaChart, TimeStackChart } from '../components/charts';
 import { fmtCompact, fmtMs, fmtNum, fmtPct, fmtTokens, fmtUsd } from '../format';
 
@@ -51,6 +52,7 @@ export default function Dashboard() {
   const [topDim, setTopDim] = useState<TopDim>('models');
   const apps = useApps();
   const { data, error, loading, reload } = useApi<Overview>(`/api/admin/analytics/overview${qs({ from: range.from, to: range.to, appId })}`);
+  const live = useLiveMode('dashboard', () => (range.preset === 'custom' ? reload() : setRange(presetRange(range.preset as '7d'))));
 
   const series = useMemo(() => (data?.series ?? []).map((s) => ({ ...s, ok: Math.max(0, (s.requests ?? 0) - (s.errors ?? 0)) })), [data]);
   const t = data?.totals ?? {};
@@ -72,17 +74,19 @@ export default function Dashboard() {
               ))}
             </select>
             <DateRangePicker value={range} onChange={setRange} />
+            <LiveToggle live={live} />
           </>
         }
       />
-      {error ? (
+      {error && !data ? (
         <div className="card">
           <ErrorState error={error} onRetry={reload} />
         </div>
       ) : !data && loading ? (
         <Loading />
       ) : data ? (
-        <div className="stack" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity .15s' }}>
+        <div className="stack" style={{ opacity: loading && !live.on ? 0.6 : 1, transition: 'opacity .15s' }}>
+          {error ? <Alert tone="warning" title="Live refresh failed; showing the last results." /> : null}
           <div className="stats">
             <StatCard label="Spend" icon={<DollarSign size={13} />} value={fmtUsd(t.costUsd ?? 0)} sub={<Delta cur={t.costUsd ?? 0} prev={prev.costUsd} />} />
             <StatCard label="Requests" icon={<Activity size={13} />} value={fmtNum(t.requests ?? 0)} sub={<Delta cur={t.requests ?? 0} prev={prev.requests} />} />

@@ -15,7 +15,8 @@ import { loadEnv } from './config/env';
 async function bootstrap() {
   const env = loadEnv();
   const logger = new Logger('Relay');
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false, logger: ['error', 'warn', 'log'] });
+  const verbose = process.env.LOG_LEVEL === 'debug';
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false, logger: verbose ? ['error', 'warn', 'log', 'debug'] : ['error', 'warn'] });
 
   const express = app.getHttpAdapter().getInstance();
   express.disable('x-powered-by');
@@ -72,8 +73,7 @@ async function bootstrap() {
   server.requestTimeout = 0;
   server.headersTimeout = 66_000;
   server.keepAliveTimeout = 65_000;
-  server.maxConnections = 0;
-  logger.log(`Relay listening on :${env.port} (db=${env.dbType}, pid=${process.pid})`);
+  console.log(`Relay listening on :${env.port} (db=${env.dbType}, pid=${process.pid})`);
 }
 
 /**

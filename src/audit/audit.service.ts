@@ -60,7 +60,9 @@ export class AuditService {
         outcome: entry.outcome ?? 'success',
         ip: actor.ip,
         userAgent: actor.userAgent?.slice(0, 300),
-        details: entry.details ? redactSecrets(entry.details) : undefined,
+        // JSON round-trip: drops undefined values and turns Dates into strings so the
+        // stored document is byte-for-byte what was hashed on every database engine.
+        details: entry.details ? JSON.parse(JSON.stringify(redactSecrets(entry.details))) : undefined,
         prevHash: last?.hash ?? GENESIS,
         kid: this.crypto.keyId,
       };

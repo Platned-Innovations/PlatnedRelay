@@ -6,6 +6,8 @@ import { CryptoService } from '../common/crypto.service';
 types.setTypeParser(20, (v) => parseInt(v, 10));
 // numeric -> number
 types.setTypeParser(1700, (v) => parseFloat(v));
+// timestamp without time zone (only produced by our UTC bucketing) -> UTC Date
+types.setTypeParser(1114, (v) => new Date(`${v.replace(' ', 'T')}Z`));
 
 const PG_TYPES: Record<FieldType, string> = {
   string: 'text',
@@ -43,9 +45,6 @@ export class PostgresStore extends Store {
       max: 20,
       idleTimeoutMillis: 30_000,
       ssl: ssl ? { rejectUnauthorized: !/sslmode=require/.test(url) || /sslrootcert/.test(url) } : undefined,
-    });
-    this.pool.on('connect', (client) => {
-      client.query(`SET TIME ZONE 'UTC'`).catch(() => undefined);
     });
   }
 
@@ -327,8 +326,10 @@ export class PostgresStore extends Store {
     if (spec.bucket) {
       this.fieldType(def, spec.bucket.field);
       const unit = { hour: 'hour', day: 'day', week: 'week', month: 'month' }[spec.bucket.unit];
-      selects.push(`date_trunc('${unit}', ${q(spec.bucket.field)}) AS "bucket"`);
-      groups.push(`date_trunc('${unit}', ${q(spec.bucket.field)})`);
+      // Bucket in UTC regardless of the session time zone.
+      const expr = `date_trunc('${unit}', ${q(spec.bucket.field)} AT TIME ZONE 'UTC')`;
+      selects.push(`${expr} AS "bucket"`);
+      groups.push(expr);
     }
     for (const [name, m] of Object.entries(spec.metrics)) selects.push(`${this.metricSql(def, m, p)} AS ${q(name)}`);
     const where = this.where(def, spec.filter, p);

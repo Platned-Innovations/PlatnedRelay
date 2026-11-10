@@ -164,8 +164,9 @@ export class AuthService {
       return true;
     }
     const hashes = user.mfaRecoveryHashes ?? [];
-    const h = this.crypto.hmac(`recovery:${clean.toUpperCase()}`);
-    if (hashes.includes(h)) {
+    const current = this.crypto.hmac(`recovery:${clean.toUpperCase()}`);
+    const h = hashes.includes(current) ? current : this.crypto.hmacPrevious(`recovery:${clean.toUpperCase()}`);
+    if (h && hashes.includes(h)) {
       await this.store.update(C.users, user.id, { mfaRecoveryHashes: hashes.filter((x) => x !== h) });
       return true;
     }

@@ -141,7 +141,7 @@ export class SettingsController {
     await this.audit.log(actor, { action: 'system.reencrypted', details: { providers, users, settings, cachePurged: cache } });
     return {
       providers, users, settings, cachePurged: cache,
-      note: 'Relay keys hashed with the previous master key keep working while RELAY_MASTER_KEY_PREVIOUS is set; regenerate them before removing it. Stored request bodies encrypted with the old key expire with their retention window.',
+      note: 'Relay keys migrate to the new master key automatically on their next use while RELAY_MASTER_KEY_PREVIOUS is set; regenerate keys that were not used before removing it. Verify and export the audit log before removing the previous key. Stored request bodies encrypted with the old key expire with their retention window.',
     };
   }
 

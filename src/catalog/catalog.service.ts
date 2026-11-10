@@ -159,7 +159,14 @@ export class CatalogService {
     const hit = this.keys.get(hash);
     if (hit && Date.now() - hit.at < KEY_TTL_MS) return hit.key;
     let key = await this.store.findOne<ApiKeyRow>(C.apiKeys, { keyHash: hash });
-    if (!key && previousHash) key = await this.store.findOne<ApiKeyRow>(C.apiKeys, { keyHash: previousHash });
+    if (!key && previousHash) {
+      key = await this.store.findOne<ApiKeyRow>(C.apiKeys, { keyHash: previousHash });
+      // Master key rotation: transparently migrate the stored digest to the current key on first use.
+      if (key) {
+        await this.store.updateWhere(C.apiKeys, key.id, { keyHash: previousHash }, { keyHash: hash }).catch(() => undefined);
+        key = { ...key, keyHash: hash };
+      }
+    }
     if (this.keys.size > 50_000) this.keys.clear();
     this.keys.set(hash, { at: Date.now(), key });
     return key;

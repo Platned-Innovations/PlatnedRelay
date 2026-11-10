@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Store } from '../database/store';
 import { C } from '../database/schema';
 import { CryptoService } from '../common/crypto.service';
-import { Actor, slugify, ZodPipe } from '../common/util';
+import { Actor, ZodPipe } from '../common/util';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/decorators';
 import { BudgetRow, CatalogService, GuardrailRow, RouteRow } from '../catalog/catalog.service';
@@ -154,4 +154,3 @@ export class PoliciesController {
   @Post('budgets/:id/reset') resetBudget(@Param('id') id: string, @CurrentActor() a: Actor) { return this.svc.resetBudget(id, a); }
 }
 
-export { slugify };

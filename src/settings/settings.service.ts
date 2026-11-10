@@ -27,7 +27,6 @@ export interface GatewaySettings {
   usageRetentionDays: number;
   auditRetentionDays: number;
   keyExpiryWarningDays: number[];
-  maxRequestBodyMb: number;
   exposeCostHeaders: boolean;
   defaultKeyRpm: number;
 }
@@ -92,7 +91,6 @@ const DEFAULTS = {
     usageRetentionDays: 730,
     auditRetentionDays: 2555,
     keyExpiryWarningDays: [14, 3, 1],
-    maxRequestBodyMb: 10,
     exposeCostHeaders: true,
     defaultKeyRpm: 0,
   } as GatewaySettings,

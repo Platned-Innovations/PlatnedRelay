@@ -115,6 +115,17 @@ export class MongoStore extends Store {
     return this.out(this.clean(doc as Record<string, unknown>)) as T;
   }
 
+  async insertMany<T extends { id: string }>(collection: string, docs: T[]): Promise<void> {
+    if (!docs.length) return;
+    for (const d of docs) for (const k of Object.keys(d)) this.checkField(collection, k);
+    try {
+      await this.coll(collection).insertMany(docs.map((d) => this.clean(d as Record<string, unknown>)), { ordered: false });
+    } catch (e) {
+      // Ignore duplicate ids from retried flushes; rethrow anything else.
+      if (!(e instanceof MongoServerError && e.code === 11000)) throw e;
+    }
+  }
+
   async findById<T = Row>(collection: string, id: string): Promise<T | null> {
     return this.out(await this.coll(collection).findOne({ _id: id as any })) as T | null;
   }

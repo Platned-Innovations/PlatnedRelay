@@ -186,6 +186,20 @@ export class PostgresStore extends Store {
     return this.fromDb(res.rows[0]) as T;
   }
 
+  async insertMany<T extends { id: string }>(collection: string, docs: T[]): Promise<void> {
+    if (!docs.length) return;
+    const def = this.def(collection);
+    const cols = [...new Set(docs.flatMap((d) => Object.keys(d).filter((k) => (d as any)[k] !== undefined)))];
+    cols.forEach((c) => this.fieldType(def, c));
+    // Chunk to stay below the 65535 bind-parameter limit.
+    const perChunk = Math.max(1, Math.floor(60000 / cols.length));
+    for (let i = 0; i < docs.length; i += perChunk) {
+      const p = new Params();
+      const rows = docs.slice(i, i + perChunk).map((d) => `(${cols.map((c) => p.add(this.toDb(this.fieldType(def, c), (d as any)[c]))).join(', ')})`);
+      await this.pool.query(`INSERT INTO ${q(collection)} (${cols.map(q).join(', ')}) VALUES ${rows.join(', ')} ON CONFLICT ("id") DO NOTHING`, p.values);
+    }
+  }
+
   async findById<T = Row>(collection: string, id: string): Promise<T | null> {
     this.def(collection);
     const res = await this.pool.query(`SELECT * FROM ${q(collection)} WHERE "id" = $1`, [id]);

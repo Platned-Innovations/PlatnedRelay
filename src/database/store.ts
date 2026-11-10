@@ -57,6 +57,8 @@ export abstract class Store {
   abstract ping(): Promise<boolean>;
 
   abstract insert<T extends { id: string }>(collection: string, doc: T): Promise<T>;
+  /** Bulk insert (used by write-behind buffers on the gateway hot path). */
+  abstract insertMany<T extends { id: string }>(collection: string, docs: T[]): Promise<void>;
   abstract findById<T = Row>(collection: string, id: string): Promise<T | null>;
   abstract findOne<T = Row>(collection: string, filter: Filter, opts?: FindOptions): Promise<T | null>;
   abstract find<T = Row>(collection: string, filter?: Filter, opts?: FindOptions): Promise<T[]>;
@@ -87,5 +89,5 @@ export function isOps(v: unknown): v is FieldOps {
 }
 
 export function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\]/g, '\$&');
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

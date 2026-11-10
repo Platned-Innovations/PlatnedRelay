@@ -21,7 +21,10 @@ async function main() {
   const [cmd, arg] = process.argv.slice(2);
   const env = loadEnv();
   const store: Store = env.dbType === 'mongodb' ? new MongoStore(env.databaseUrl) : new PostgresStore(env.databaseUrl);
+  process.stdout.write(`Connecting to ${env.dbType}... `);
+  const t0 = Date.now();
   await store.init(SCHEMA);
+  console.log(`ok (${Date.now() - t0} ms)`);
   try {
     if (cmd === 'list') {
       const users = await store.find<any>(C.users, {}, { sort: { createdAt: 1 } });

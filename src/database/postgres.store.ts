@@ -44,6 +44,7 @@ export class PostgresStore extends Store {
       connectionString: url,
       max: 20,
       idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 15_000,
       ssl: ssl ? { rejectUnauthorized: !/sslmode=require/.test(url) || /sslrootcert/.test(url) } : undefined,
     });
   }
@@ -54,21 +55,36 @@ export class PostgresStore extends Store {
     // collides in PostgreSQL, so schema setup runs under a cluster-wide advisory lock.
     const client = await this.pool.connect();
     try {
+      // Read the current schema in two queries and only issue DDL for what is missing,
+      // so startup costs a few round-trips even against a distant database.
+      const plan = async () => {
+        const [cols, idx] = await Promise.all([
+          client.query(`SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = current_schema()`),
+          client.query(`SELECT indexname FROM pg_indexes WHERE schemaname = current_schema()`),
+        ]);
+        const have = new Set(cols.rows.map((r) => `${r.table_name}.${r.column_name}`));
+        const indexes = new Set(idx.rows.map((r) => r.indexname));
+        const ddl: string[] = [];
+        for (const def of defs) {
+          if (!have.has(`${def.name}.id`)) ddl.push(`CREATE TABLE IF NOT EXISTS ${q(def.name)} ("id" text PRIMARY KEY)`);
+          for (const [field, type] of Object.entries(def.fields)) {
+            if (!have.has(`${def.name}.${field}`)) ddl.push(`ALTER TABLE ${q(def.name)} ADD COLUMN IF NOT EXISTS ${q(field)} ${PG_TYPES[type]}`);
+          }
+          for (const [prefix, list, unique] of [['ix', def.indexes ?? [], false], ['ux', def.unique ?? [], true]] as const) {
+            for (const c of list) {
+              const name = `${prefix}_${def.name}_${c.join('_')}`.slice(0, 60);
+              if (!indexes.has(name)) ddl.push(`CREATE ${unique ? 'UNIQUE ' : ''}INDEX IF NOT EXISTS ${q(name)} ON ${q(def.name)} (${c.map(q).join(', ')})`);
+            }
+          }
+        }
+        return ddl;
+      };
+      if (!(await plan()).length) return; // already up to date: no lock needed
+      // Several workers/instances may start at once: concurrent "IF NOT EXISTS" DDL still
+      // collides in PostgreSQL, so changes run under a cluster-wide advisory lock (re-planned inside it).
       await client.query(`SELECT pg_advisory_lock(hashtext('relay:schema'))`);
-      for (const def of defs) {
-        await client.query(`CREATE TABLE IF NOT EXISTS ${q(def.name)} ("id" text PRIMARY KEY)`);
-        for (const [field, type] of Object.entries(def.fields)) {
-          await client.query(`ALTER TABLE ${q(def.name)} ADD COLUMN IF NOT EXISTS ${q(field)} ${PG_TYPES[type]}`);
-        }
-        for (const cols of def.indexes ?? []) {
-          const name = `ix_${def.name}_${cols.join('_')}`.slice(0, 60);
-          await client.query(`CREATE INDEX IF NOT EXISTS ${q(name)} ON ${q(def.name)} (${cols.map(q).join(', ')})`);
-        }
-        for (const cols of def.unique ?? []) {
-          const name = `ux_${def.name}_${cols.join('_')}`.slice(0, 60);
-          await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS ${q(name)} ON ${q(def.name)} (${cols.map(q).join(', ')})`);
-        }
-      }
+      const ddl = await plan();
+      if (ddl.length) await client.query(ddl.join(';\n'));
     } finally {
       await client.query(`SELECT pg_advisory_unlock(hashtext('relay:schema'))`).catch(() => undefined);
       client.release();

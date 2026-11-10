@@ -1,6 +1,13 @@
 # Deploy to Azure Web App
 
-Recommended: **Azure App Service (Linux) – Web App for Containers**, with secrets in **Key Vault** referenced through the app's managed identity, images in **Azure Container Registry**, and **Azure Database for PostgreSQL Flexible Server** (or MongoDB via Azure Cosmos DB for MongoDB vCore / MongoDB Atlas).
+Two supported ways to run Relay on Azure App Service (Linux):
+
+| Your Web App's runtime | Follow | GitHub workflow |
+|---|---|---|
+| **Node 22 LTS** (code deployment, e.g. created in the portal / Deployment Center) | [Web App with the Node.js runtime](#alternative-web-app-with-the-nodejs-runtime-code-deployment-no-container) | `.github/workflows/azure-webapp-node.yml` |
+| **Container** (Web App for Containers) | Steps 1–3 below | `.github/workflows/azure-webapp.yml` |
+
+The container option is the fully scripted one: secrets in **Key Vault** referenced through the app's managed identity, images in **Azure Container Registry**, and **Azure Database for PostgreSQL Flexible Server** (or MongoDB via Azure Cosmos DB for MongoDB vCore / MongoDB Atlas).
 
 ## 1. Provision infrastructure (Bicep)
 

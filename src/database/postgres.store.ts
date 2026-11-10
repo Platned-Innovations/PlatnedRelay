@@ -49,20 +49,29 @@ export class PostgresStore extends Store {
   }
 
   async init(defs: CollectionDef[]): Promise<void> {
-    for (const def of defs) {
-      this.defs.set(def.name, def);
-      await this.pool.query(`CREATE TABLE IF NOT EXISTS ${q(def.name)} ("id" text PRIMARY KEY)`);
-      for (const [field, type] of Object.entries(def.fields)) {
-        await this.pool.query(`ALTER TABLE ${q(def.name)} ADD COLUMN IF NOT EXISTS ${q(field)} ${PG_TYPES[type]}`);
+    for (const def of defs) this.defs.set(def.name, def);
+    // Several workers/instances may start at once: concurrent "IF NOT EXISTS" DDL still
+    // collides in PostgreSQL, so schema setup runs under a cluster-wide advisory lock.
+    const client = await this.pool.connect();
+    try {
+      await client.query(`SELECT pg_advisory_lock(hashtext('relay:schema'))`);
+      for (const def of defs) {
+        await client.query(`CREATE TABLE IF NOT EXISTS ${q(def.name)} ("id" text PRIMARY KEY)`);
+        for (const [field, type] of Object.entries(def.fields)) {
+          await client.query(`ALTER TABLE ${q(def.name)} ADD COLUMN IF NOT EXISTS ${q(field)} ${PG_TYPES[type]}`);
+        }
+        for (const cols of def.indexes ?? []) {
+          const name = `ix_${def.name}_${cols.join('_')}`.slice(0, 60);
+          await client.query(`CREATE INDEX IF NOT EXISTS ${q(name)} ON ${q(def.name)} (${cols.map(q).join(', ')})`);
+        }
+        for (const cols of def.unique ?? []) {
+          const name = `ux_${def.name}_${cols.join('_')}`.slice(0, 60);
+          await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS ${q(name)} ON ${q(def.name)} (${cols.map(q).join(', ')})`);
+        }
       }
-      for (const cols of def.indexes ?? []) {
-        const name = `ix_${def.name}_${cols.join('_')}`.slice(0, 60);
-        await this.pool.query(`CREATE INDEX IF NOT EXISTS ${q(name)} ON ${q(def.name)} (${cols.map(q).join(', ')})`);
-      }
-      for (const cols of def.unique ?? []) {
-        const name = `ux_${def.name}_${cols.join('_')}`.slice(0, 60);
-        await this.pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS ${q(name)} ON ${q(def.name)} (${cols.map(q).join(', ')})`);
-      }
+    } finally {
+      await client.query(`SELECT pg_advisory_unlock(hashtext('relay:schema'))`).catch(() => undefined);
+      client.release();
     }
   }
 

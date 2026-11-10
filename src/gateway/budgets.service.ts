@@ -3,6 +3,7 @@ import { Store } from '../database/store';
 import { C } from '../database/schema';
 import { BudgetRow, BudgetScope, CatalogService } from '../catalog/catalog.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { bus } from '../common/bus';
 
 export interface SpendContext {
   appId: string;
@@ -61,7 +62,14 @@ export class BudgetsService {
   private readonly logger = new Logger('Budgets');
   private local = new Map<string, { at: number; spent: number }>();
 
-  constructor(private readonly store: Store, private readonly catalog: CatalogService, private readonly notifications: NotificationsService) {}
+  constructor(private readonly store: Store, private readonly catalog: CatalogService, private readonly notifications: NotificationsService) {
+    // Spend totals recorded by any worker are pushed to all workers so caps are enforced immediately.
+    // Totals only grow within a period, so out-of-order messages never lower the view (except on reset).
+    bus.subscribe('budget.spent', (m: { key: string; spent: number; reset?: boolean }) => {
+      const cur = this.local.get(m.key);
+      if (m.reset || !cur || m.spent >= cur.spent) this.local.set(m.key, { at: Date.now(), spent: m.spent });
+    });
+  }
 
   private async spent(b: BudgetRow): Promise<number> {
     const key = `${b.id}|${periodKey(b.period)}`;
@@ -99,7 +107,7 @@ export class BudgetsService {
             { createdAt: new Date(), notified: [] },
             { updatedAt: new Date() },
           );
-          this.local.set(`${b.id}|${pk}`, { at: Date.now(), spent: row.spentUsd });
+          bus.publish('budget.spent', { key: `${b.id}|${pk}`, spent: row.spentUsd });
           await this.checkThresholds(b, row, snap);
         } catch (e: any) {
           this.logger.error(`Budget ${b.id} update failed: ${e.message}`);
@@ -145,7 +153,7 @@ export class BudgetsService {
   async reset(b: BudgetRow) {
     const pk = periodKey(b.period);
     await this.store.deleteMany(C.budgetCounters, { budgetId: b.id, periodKey: pk });
-    this.local.delete(`${b.id}|${pk}`);
+    bus.publish('budget.spent', { key: `${b.id}|${pk}`, spent: 0, reset: true });
   }
 }
 

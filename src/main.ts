@@ -11,6 +11,7 @@ import cookieParser from 'cookie-parser';
 import { json, static as serveStatic, type NextFunction, type Request, type Response } from 'express';
 import { AppModule } from './app.module';
 import { loadEnv } from './config/env';
+import { startBusRelay } from './common/bus';
 
 async function bootstrap() {
   const env = loadEnv();
@@ -87,6 +88,7 @@ function start() {
   if (workers > 1 && cluster.isPrimary) {
     loadEnv();
     console.log(`Relay primary ${process.pid} starting ${workers} workers`);
+    startBusRelay();
     for (let i = 0; i < workers; i++) cluster.fork();
     cluster.on('exit', (w, code) => {
       console.error(`Worker ${w.process.pid} exited (${code}); restarting`);

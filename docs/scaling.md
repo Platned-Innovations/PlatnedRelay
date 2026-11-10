@@ -5,7 +5,7 @@ Many applications call Relay at the same time, so the request path is built for 
 ## How a single instance handles many parallel requests
 
 - **Fully asynchronous I/O.** Node.js handles thousands of concurrent upstream calls on one event loop; time spent waiting on providers costs no threads.
-- **No database round-trips on the hot path in the common case.** Keys (15 s), configuration snapshot (providers, models, routes, apps, guardrails, budgets: 15 s, refreshed in the background, stale-while-revalidate) and spend-cap totals (5 s) are cached in memory.
+- **No database round-trips on the hot path in the common case.** Keys (5 s), configuration snapshot (providers, models, routes, apps, guardrails, budgets: 15 s, refreshed in the background, stale-while-revalidate) and spend-cap totals (5 s) are cached in memory.
 - **Write-behind metering.** Usage records go into an in-memory buffer flushed in bulk every second (or every 500 records), so requests never wait on analytics writes. The buffer is drained on graceful shutdown and retried if the DB is briefly unavailable.
 - **No global locks.** Per-request state lives on the stack; rate limiters and counters are lock-free in-memory maps.
 - **Streaming without buffering**, with client-disconnect propagation to cancel upstream work.
@@ -22,9 +22,9 @@ Measured in the e2e suite: 200 simultaneous chat requests against a provider wit
 | Concern | Behaviour with many instances |
 |---|---|
 | Rate limits (RPM/TPM/concurrency) | Enforced **per process**. Effective cluster limit ≈ limit × processes. Divide limits accordingly, or front Relay with a gateway that enforces global limits. |
-| Spend caps | Counters are atomic in the DB; each process refreshes its view every 5 s. Concurrent bursts can overshoot a cap slightly (bounded by traffic during that window). |
-| Key revocation | Immediate on the instance that performed it; other instances within 15 s (key cache TTL). |
-| Config changes | Immediate locally; others within 15 s. |
+| Spend caps | Counters are atomic in the DB. New totals are pushed instantly to every worker in the same container; other instances refresh every 5 s, so concurrent bursts across instances can overshoot a cap slightly (bounded by traffic in that window). |
+| Key revocation / deactivation | Immediate on every worker of the container that handled the change; other instances within 5 s (key cache TTL). |
+| Config changes | Immediate on every worker of the container (blocking reload); other instances within 15 s. |
 | Response cache | Shared through the DB (encrypted); each process also keeps an LRU of 5,000 entries. |
 | Audit chain | Linearised by a unique sequence index with retry. |
 | Maintenance jobs | Run by one instance at a time (DB lease). |

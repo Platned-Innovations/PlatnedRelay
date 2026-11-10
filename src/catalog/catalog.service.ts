@@ -4,6 +4,7 @@ import { C } from '../database/schema';
 import { CryptoService } from '../common/crypto.service';
 import { ModelCapabilities, ModelRuntime, ProviderRuntime, ProviderType } from '../providers/adapters';
 import { Pricing } from '../providers/presets';
+import { bus } from '../common/bus';
 
 export interface ProviderRow {
   id: string; name: string; slug: string; type: ProviderType; presetId?: string; baseUrl: string;
@@ -68,7 +69,7 @@ export interface Snapshot {
 }
 
 const SNAPSHOT_TTL_MS = 15_000;
-const KEY_TTL_MS = 15_000;
+const KEY_TTL_MS = 5_000;
 
 /**
  * In-memory read model for the gateway hot path. Configuration rarely changes,
@@ -83,24 +84,33 @@ export class CatalogService {
   private loading?: Promise<Snapshot>;
   private keys = new Map<string, { at: number; key: ApiKeyRow | null }>();
 
-  constructor(private readonly store: Store, private readonly crypto: CryptoService) {}
+  private dirty = false;
+
+  constructor(private readonly store: Store, private readonly crypto: CryptoService) {
+    bus.subscribe('catalog.invalidate', () => (this.dirty = true));
+    bus.subscribe('keys.invalidate', () => this.keys.clear());
+  }
 
   async snapshot(): Promise<Snapshot> {
-    if (this.snap && Date.now() - this.snap.loadedAt < SNAPSHOT_TTL_MS) return this.snap;
-    if (this.snap) {
-      // Serve stale while refreshing in the background (never block requests on reload).
+    if (this.snap && !this.dirty && Date.now() - this.snap.loadedAt < SNAPSHOT_TTL_MS) return this.snap;
+    if (this.snap && !this.dirty) {
+      // Periodic refresh: serve stale while refreshing in the background (never block requests).
       void this.reload().catch((e) => this.logger.error(`Catalog refresh failed: ${e.message}`));
       return this.snap;
     }
+    // First load or explicit admin change: wait for fresh configuration.
+    this.dirty = false;
     return this.reload();
   }
 
+  /** Configuration changed: every worker reloads before serving its next request. */
   invalidate() {
-    if (this.snap) this.snap.loadedAt = 0;
+    bus.publish('catalog.invalidate');
   }
 
+  /** A key changed (deactivated, revoked, regenerated...): drop cached keys on every worker. */
   invalidateKeys() {
-    this.keys.clear();
+    bus.publish('keys.invalidate');
   }
 
   private reload(): Promise<Snapshot> {
@@ -154,7 +164,7 @@ export class CatalogService {
     return snap;
   }
 
-  /** Resolves a relay API key by its HMAC digest (cached briefly; revocations propagate within 15s cluster-wide, instantly locally). */
+  /** Resolves a relay API key by its HMAC digest. Cached 5 s; key changes are pushed to every worker of a container instantly. */
   async keyByHash(hash: string, previousHash?: string): Promise<ApiKeyRow | null> {
     const hit = this.keys.get(hash);
     if (hit && Date.now() - hit.at < KEY_TTL_MS) return hit.key;

@@ -5,6 +5,7 @@
 const [base, username, password] = process.argv.slice(2);
 let cookies = {};
 const NEWPW = 'Sm0ke-Test-Passw0rd!';
+const MOCK = process.env.MOCK_URL || 'http://localhost:18080';
 const ok = (c, m) => { if (!c) { console.error('FAIL:', m); process.exitCode = 1; } else console.log('ok  -', m); };
 
 async function admin(method, path, body) {
@@ -38,10 +39,10 @@ r = await admin('POST', '/api/admin/apps', { name: 'nocsrf' });
 ok(r.status === 403, 'CSRF required for mutations');
 cookies.relay_csrf = csrf;
 
-const prov = (await admin('POST', '/api/admin/providers', { name: 'Mock OpenAI', type: 'openai', baseUrl: 'http://localhost:18080/v1', apiKey: 'sk-mock-1234567890', config: {} })).json;
+const prov = (await admin('POST', '/api/admin/providers', { name: 'Mock OpenAI', type: 'openai', baseUrl: `${MOCK}/v1`, apiKey: 'sk-mock-1234567890', config: {} })).json;
 ok(prov.hasApiKey && !JSON.stringify(prov).includes('sk-mock-1234567890'), 'provider created, api key never returned');
-const failing = (await admin('POST', '/api/admin/providers', { name: 'Failing', type: 'openai', baseUrl: 'http://localhost:18080/fail', config: {}, maxRetries: 0 })).json;
-const anth = (await admin('POST', '/api/admin/providers', { name: 'Mock Anthropic', type: 'anthropic', baseUrl: 'http://localhost:18080', apiKey: 'sk-ant-mock', config: {} })).json;
+const failing = (await admin('POST', '/api/admin/providers', { name: 'Failing', type: 'openai', baseUrl: `${MOCK}/fail`, config: {}, maxRetries: 0 })).json;
+const anth = (await admin('POST', '/api/admin/providers', { name: 'Mock Anthropic', type: 'anthropic', baseUrl: MOCK, apiKey: 'sk-ant-mock', config: {} })).json;
 r = await admin('POST', `/api/admin/providers/${prov.id}/test`);
 ok(r.json.ok, 'provider connection test: ' + r.json.message);
 

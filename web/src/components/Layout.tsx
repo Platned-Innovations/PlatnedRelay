@@ -18,6 +18,7 @@ import {
   Moon,
   Network,
   PiggyBank,
+  BookOpen,
   Server,
   Settings,
   ShieldCheck,
@@ -74,7 +75,7 @@ const NAV: { title: string; items: { to: string; label: string; icon: typeof Act
       { to: '/settings', label: 'Settings', icon: Settings },
     ],
   },
-  { title: 'Tools', items: [{ to: '/playground', label: 'Playground', icon: TerminalSquare }] },
+  { title: 'Tools', items: [{ to: '/playground', label: 'Playground', icon: TerminalSquare }, { to: '/docs', label: 'Documentation', icon: BookOpen }] },
 ];
 
 function ThemeToggle() {

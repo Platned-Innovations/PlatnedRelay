@@ -8,6 +8,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // docs/*.md live in the repository root and are bundled into the docs page
+    fs: { allow: ['..'] },
     proxy: {
       '/api': { target, changeOrigin: false },
       '/v1': { target, changeOrigin: false },

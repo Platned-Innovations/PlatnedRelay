@@ -1982,3 +1982,45 @@ dl.kv dd {
   color: var(--text-2);
 }
 .markdown hr { border: 0; border-top: 1px solid var(--border); margin: 24px 0; }
+
+/* ---------- Live mode ---------- */
+.live-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.live-toggle.on .live-btn {
+  color: var(--success, #16a34a);
+  border-color: color-mix(in srgb, var(--success, #16a34a) 45%, transparent);
+  background: color-mix(in srgb, var(--success, #16a34a) 10%, transparent);
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success, #16a34a);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--success, #16a34a) 60%, transparent);
+  animation: live-pulse 1.6s ease-out infinite;
+}
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success, #16a34a) 55%, transparent); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.live-toggle .select-sm {
+  width: auto;
+}
+.live-updated {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+tr.row-new > td {
+  animation: row-new-flash 2.4s ease-out;
+}
+@keyframes row-new-flash {
+  0%, 25% { background: color-mix(in srgb, var(--primary) 18%, transparent); }
+  100% { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-dot, tr.row-new > td { animation: none; }
+}

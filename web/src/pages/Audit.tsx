@@ -8,6 +8,7 @@ import { Alert, Badge, CodeBlock, ErrorState, FormField, KV, Loading, PageHeader
 import { DataTable, Pager, type Column } from '../components/DataTable';
 import { Drawer } from '../components/Modal';
 import { DateRangePicker, presetRange, type DateRange } from '../components/DateRangePicker';
+import { LiveToggle, useLiveMode, useNewRowKeys } from '../components/Live';
 import { fmtDateTimeSec, fmtNum } from '../format';
 
 const RESOURCE_TYPES = ['user', 'api_key', 'app', 'entity', 'provider', 'model', 'route', 'guardrail', 'budget', 'prompt', 'settings'];
@@ -23,8 +24,12 @@ export default function Audit() {
   const a = useDebounced(action);
   const ac = useDebounced(actor);
   const filters = { from: range.from, to: range.to, action: a, actor: ac, resourceType, outcome };
-  useEffect(() => setPage(1), [range, a, ac, resourceType, outcome]);
+  // Reset paging when the user changes the range (not when live mode slides it forward).
+  const rangeKey = range.preset === 'custom' ? `${range.from}|${range.to}` : range.preset;
+  useEffect(() => setPage(1), [rangeKey, a, ac, resourceType, outcome]);
   const { data, error, loading, reload } = useApi<Paged<AuditRow>>(`/api/admin/audit${qs({ ...filters, page, pageSize: 50 })}`);
+  const live = useLiveMode('audit', () => (range.preset === 'custom' ? reload() : setRange(presetRange(range.preset as '30d'))));
+  const fresh = useNewRowKeys(data?.rows, (r) => r.id, live.on, JSON.stringify([rangeKey, a, ac, resourceType, outcome, page]));
   const [sel, setSel] = useState<AuditRow | null>(null);
   const [verify, setVerify] = useState<AuditVerify | null>(null);
   const { busy, run } = useAction();
@@ -44,7 +49,9 @@ export default function Audit() {
         title="Audit log"
         subtitle="Tamper-evident record of every administrative action. Each entry is chained to the previous one with an HMAC so edits or deletions are detectable."
         actions={
-          isAdmin && (
+          <>
+            <LiveToggle live={live} />
+            {isAdmin && (
             <>
               <button className="btn" disabled={busy} onClick={() => run(async () => setVerify(await api.get<AuditVerify>('/api/admin/audit/verify')))}>
                 {busy ? <Spinner size={14} /> : <ShieldCheck size={14} />} Verify integrity
@@ -53,7 +60,8 @@ export default function Audit() {
                 <Download size={14} /> Export JSON
               </a>
             </>
-          )
+            )}
+          </>
         }
       />
       {verify && (
@@ -103,13 +111,14 @@ export default function Audit() {
         </div>
       </div>
       <div className="card">
-        {error ? (
+        {error && !data ? (
           <ErrorState error={error} onRetry={reload} />
         ) : !data ? (
           <Loading />
         ) : (
-          <div style={{ opacity: loading ? 0.6 : 1 }}>
-            <DataTable columns={columns} rows={data.rows} rowKey={(r) => r.id} onRowClick={setSel} selectedKey={sel?.id} emptyTitle="No audit entries match" compact />
+          <div style={{ opacity: loading && !live.on ? 0.6 : 1 }}>
+            {error ? <Alert tone="warning" title="Live refresh failed; showing the last results." /> : null}
+            <DataTable columns={columns} rows={data.rows} rowKey={(r) => r.id} onRowClick={setSel} selectedKey={sel?.id} highlightKeys={fresh} emptyTitle="No audit entries match" compact />
             <Pager page={data.page} pageSize={data.pageSize} total={data.total} onPage={setPage} />
           </div>
         )}

@@ -58,7 +58,7 @@ export function TimeAreaChart({ data, bucket, def, height = 260 }: { data: Recor
           <XAxis dataKey="bucket" tickFormatter={(v) => fmtBucket(String(v), bucket)} stroke={t.axis} tick={{ fontSize: 11, fill: t.axis }} tickLine={false} axisLine={{ stroke: t.grid }} minTickGap={24} />
           <YAxis tickFormatter={(v) => def.format(Number(v))} stroke={t.axis} tick={{ fontSize: 11, fill: t.axis }} tickLine={false} axisLine={false} width={64} />
           <Tooltip cursor={{ stroke: t.axis, strokeDasharray: '3 3' }} content={<TooltipBox title={(l) => fmtBucket(String(l), bucket)} defs={[def]} colors={[color]} />} />
-          <Area type="monotone" dataKey={def.key} stroke={color} strokeWidth={2} fill="url(#areaFill)" dot={data.length <= 2 ? { r: 4, fill: color, stroke: t.surface, strokeWidth: 2 } : false} activeDot={{ r: 4, stroke: t.surface, strokeWidth: 2 }} />
+          <Area isAnimationActive={false} type="monotone" dataKey={def.key} stroke={color} strokeWidth={2} fill="url(#areaFill)" dot={data.length <= 2 ? { r: 4, fill: color, stroke: t.surface, strokeWidth: 2 } : false} activeDot={{ r: 4, stroke: t.surface, strokeWidth: 2 }} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -80,7 +80,7 @@ export function TimeStackChart({ data, bucket, defs, height = 260 }: { data: Rec
             <YAxis tickFormatter={(v) => fmtCompact(Number(v))} stroke={t.axis} tick={{ fontSize: 11, fill: t.axis }} tickLine={false} axisLine={false} width={48} allowDecimals={false} />
             <Tooltip cursor={{ fill: t.cursor }} content={<TooltipBox title={(l) => fmtBucket(String(l), bucket)} defs={defs} colors={colors} />} />
             {defs.map((d, i) => (
-              <Bar key={d.key} dataKey={d.key} stackId="s" fill={colors[i]} stroke={t.surface} strokeWidth={1} radius={i === defs.length - 1 ? [3, 3, 0, 0] : 0} maxBarSize={36} />
+              <Bar isAnimationActive={false} key={d.key} dataKey={d.key} stackId="s" fill={colors[i]} stroke={t.surface} strokeWidth={1} radius={i === defs.length - 1 ? [3, 3, 0, 0] : 0} maxBarSize={36} />
             ))}
           </BarChart>
         </ResponsiveContainer>
@@ -101,7 +101,7 @@ export function RankBarChart({ data, valueKey, nameKey = 'name', format = fmtUsd
           <XAxis type="number" tickFormatter={(v) => format(Number(v))} stroke={t.axis} tick={{ fontSize: 11, fill: t.axis }} tickLine={false} axisLine={false} />
           <YAxis type="category" dataKey={nameKey} width={150} stroke={t.axis} tick={{ fontSize: 11.5, fill: t.axis }} tickLine={false} axisLine={false} tickFormatter={(v: string) => (v.length > 22 ? `${v.slice(0, 21)}…` : v)} />
           <Tooltip cursor={{ fill: t.cursor }} content={<TooltipBox title={(l) => String(l)} defs={[{ key: valueKey, label: 'Value', format }]} colors={[t.series[0]]} />} />
-          <Bar dataKey={valueKey} fill={t.series[0]} radius={[0, 3, 3, 0]} maxBarSize={18} />
+          <Bar isAnimationActive={false} dataKey={valueKey} fill={t.series[0]} radius={[0, 3, 3, 0]} maxBarSize={18} />
         </BarChart>
       </ResponsiveContainer>
     </div>

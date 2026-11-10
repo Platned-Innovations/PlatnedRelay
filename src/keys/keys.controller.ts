@@ -125,6 +125,7 @@ export class KeysService {
       };
       await this.store.insert(C.entities, entity);
       entityId = entity.id;
+      this.catalog.invalidate();
       await this.audit.log(actor, { action: 'entity.created', resourceType: 'entity', resourceId: entity.id, details: { name: entity.name } });
     }
     const expiresAt = input.expiresAt ? new Date(input.expiresAt) : undefined;

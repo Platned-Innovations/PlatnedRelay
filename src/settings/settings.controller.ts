@@ -43,7 +43,7 @@ const SCHEMAS: Record<SettingsKey, z.ZodTypeAny> = {
     fromAddress: z.string().email().or(z.literal('')),
     fromName: z.string().max(100),
     adminRecipients: z.array(z.string().email()).max(100),
-    events: z.record(z.enum(NOTIFICATION_EVENTS), z.boolean()),
+    events: z.partialRecord(z.enum(NOTIFICATION_EVENTS), z.boolean()),
     smtp: z.object({ host: z.string().max(255), port: z.number().int().min(1).max(65535), secure: z.boolean(), username: z.string().max(255), password: z.string().max(1000).optional() }).partial(),
     graph: z.object({ tenantId: z.string().max(100), clientId: z.string().max(100), clientSecret: z.string().max(1000).optional(), senderUpn: z.string().max(255) }).partial(),
     webhooks: z.array(z.object({ id: z.string().max(60), name: z.string().min(1).max(100), url: z.string().url().max(1000), events: z.array(z.string().max(60)).max(50), format: z.enum(['json', 'slack', 'teams']), enabled: z.boolean() })).max(20),

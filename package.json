@@ -10,7 +10,7 @@
   "scripts": {
     "build": "npm run build:api && npm run build:web",
     "build:api": "nest build",
-    "build:web": "npm --prefix web run build",
+    "build:web": "npm --prefix web install --no-audit --no-fund && npm --prefix web run build",
     "start": "node dist/main.js",
     "admin": "node dist/cli.js",
     "dev": "nest start --watch",

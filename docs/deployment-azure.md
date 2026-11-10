@@ -49,18 +49,48 @@ CI/CD: `.github/workflows/azure-webapp.yml` runs typecheck + unit tests + UI bui
 4. Settings → Security → admin IP allowlist (corporate egress IPs / VPN), require MFA.
 5. Settings → Notifications → Microsoft Graph (app registration with `Mail.Send` application permission, restricted with an application access policy) or SMTP.
 
-## Alternative: Web App with the Node runtime (no container)
+## Alternative: Web App with the Node.js runtime (code deployment, no container)
 
-Create a Linux Web App with runtime `NODE|22-lts`, then deploy a zip containing `package.json`, `dist/`, `web/dist/` and production `node_modules`:
+Use this when the Web App was created with the **Node 22 LTS** runtime stack (e.g. through the portal). The repository's workflow `.github/workflows/azure-webapp-node.yml` builds the API and admin UI, runs typecheck and tests, prunes dev dependencies, zips a ready-to-run package and deploys it, then waits for `/health`.
+
+> If you connected the repository through **Deployment Center**, Azure commits its own generic workflow (`main_<app>.yml`). It runs `npm install` only at the repository root, so it cannot build the admin UI. Delete that file and use `azure-webapp-node.yml` instead (or disconnect Deployment Center's GitHub integration so it doesn't recreate it).
+
+### Web App configuration
+
+| Where | Setting | Value |
+|---|---|---|
+| Configuration → General settings | Startup command | `node dist/main.js` |
+| | SCM Basic Auth Publishing Credentials | On (only needed for publish-profile deployments) |
+| Environment variables | `SCM_DO_BUILD_DURING_DEPLOYMENT` | `false` (the package is prebuilt) |
+| | `NODE_ENV` | `production` |
+| | `TRUST_PROXY` | `1` |
+| | `RELAY_WORKERS` | `auto` |
+| | `DB_TYPE` | `postgres` or `mongodb` |
+| | `DATABASE_URL` | Key Vault reference, e.g. `@Microsoft.KeyVault(SecretUri=https://<vault>.vault.azure.net/secrets/relay-database-url/)` |
+| | `RELAY_MASTER_KEY` | Key Vault reference to the master key |
+| Monitoring → Health check | Path | `/health` |
+| Settings → Configuration | Always On | On |
+
+`PORT` is provided by App Service automatically. For Key Vault references, enable the Web App's system-assigned identity and grant it the *Key Vault Secrets User* role on the vault.
+
+### GitHub setup
+
+1. Repository **variable** `AZURE_WEBAPP_NAME` = the Web App name.
+2. Repository **secret** `AZURE_WEBAPP_PUBLISH_PROFILE` = the downloaded publish profile (Web App → Overview → *Download publish profile*).
+3. Push to `main` (or run the workflow manually).
+
+To use OIDC instead of a publish profile, add a federated credential for the repository to an Entra app registration with *Website Contributor* on the Web App, add an `azure/login@v2` step with `client-id`/`tenant-id`/`subscription-id`, and remove the `publish-profile` input.
+
+### Manual deployment
 
 ```bash
 npm ci && npm --prefix web ci && npm run build && npm prune --omit=dev
-zip -r relay.zip package.json dist web/dist node_modules
-az webapp deploy -g rg-relay -n <app> --src-path relay.zip --type zip
-az webapp config set -g rg-relay -n <app> --startup-file "node dist/main.js"
+zip -qr relay.zip package.json package-lock.json dist web/dist node_modules
+az webapp deploy -g <rg> -n <app> --src-path relay.zip --type zip
+az webapp config set -g <rg> -n <app> --startup-file "node dist/main.js"
 ```
 
-Set the same app settings (Key Vault references) as in the Bicep template. Disable Oryx build (`SCM_DO_BUILD_DURING_DEPLOYMENT=false`) since the package is prebuilt.
+The first start on an empty database prints the initial owner credentials to the log stream (Monitoring → Log stream). Missed them? Open the SSH console (Development Tools → SSH), `cd /home/site/wwwroot` and run `node dist/cli.js reset`.
 
 ## Networking options
 

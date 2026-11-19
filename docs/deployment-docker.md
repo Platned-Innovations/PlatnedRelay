@@ -10,13 +10,13 @@
 - Works with a read-only root filesystem (compose files set `read_only: true`)
 
 ```bash
-docker build -t relay-llm-gateway:1.0.0 .
+docker build -t relay-llm-gateway:1.1.0 .
 docker run -d -p 8080:8080 \
   -e DB_TYPE=postgres \
   -e DATABASE_URL='postgres://relay:***@db-host:5432/relay?sslmode=require' \
   -e RELAY_MASTER_KEY='***' \
   --read-only --tmpfs /tmp --security-opt no-new-privileges \
-  relay-llm-gateway:1.0.0
+  relay-llm-gateway:1.1.0
 docker logs <container> | grep -A3 "Initial owner"   # first start on an empty DB only
 ```
 

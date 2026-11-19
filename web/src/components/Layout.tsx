@@ -80,13 +80,19 @@ const NAV: { title: string; items: { to: string; label: string; icon: typeof Act
 
 function ThemeToggle() {
   const { pref } = useTheme();
-  const order: ThemePref[] = ['system', 'light', 'dark'];
-  const next = order[(order.indexOf(pref) + 1) % order.length];
-  const Icon = pref === 'dark' ? Moon : pref === 'light' ? Sun : Monitor;
+  const opts: { v: ThemePref; label: string; Icon: typeof Sun }[] = [
+    { v: 'system', label: 'System', Icon: Monitor },
+    { v: 'light', label: 'Light', Icon: Sun },
+    { v: 'dark', label: 'Dark', Icon: Moon },
+  ];
   return (
-    <button className="btn btn-ghost btn-icon" title={`Theme: ${pref} (click for ${next})`} aria-label={`Theme: ${pref}`} onClick={() => setThemePref(next)}>
-      <Icon size={16} />
-    </button>
+    <div className="theme-seg" role="radiogroup" aria-label="Theme">
+      {opts.map(({ v, label, Icon }) => (
+        <button key={v} type="button" role="radio" aria-checked={pref === v} aria-label={label} title={label} className={pref === v ? 'active' : ''} onClick={() => setThemePref(v)}>
+          <Icon size={15} />
+        </button>
+      ))}
+    </div>
   );
 }
 

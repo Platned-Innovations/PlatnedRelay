@@ -1,6 +1,6 @@
 {
   "name": "relay-llm-gateway",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Relay - Internal LLM Gateway: one secure API in front of local and cloud LLMs with routing, metering, budgets, caching, PII redaction and guardrails.",
   "private": true,
   "license": "SEE LICENSE IN LICENSE",

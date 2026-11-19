@@ -41,8 +41,8 @@ Manual:
 ```bash
 ACR=$(az deployment group show -g rg-relay -n main --query properties.outputs.acrLoginServer.value -o tsv)
 APP=$(az deployment group show -g rg-relay -n main --query properties.outputs.siteName.value -o tsv)
-az acr build -r ${ACR%%.*} -t relay:1.0.0 .
-az webapp config container set -g rg-relay -n $APP --container-image-name $ACR/relay:1.0.0
+az acr build -r ${ACR%%.*} -t relay:1.1.0 .
+az webapp config container set -g rg-relay -n $APP --container-image-name $ACR/relay:1.1.0
 az webapp log tail -g rg-relay -n $APP | grep -A3 "Initial owner"
 ```
 

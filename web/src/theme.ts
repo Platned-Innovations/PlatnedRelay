@@ -56,8 +56,8 @@ export function useTheme(): { pref: ThemePref; resolved: 'light' | 'dark' } {
 
 /** Categorical chart palette (validated reference palette), stepped per mode. Order is fixed. */
 const SERIES = {
-  light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'],
-  dark: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'],
+  light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#0e8fa8', '#e34948'],
+  dark: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#2aa6c0', '#e66767'],
 };
 
 export function useChartTheme() {
@@ -65,9 +65,9 @@ export function useChartTheme() {
   const dark = resolved === 'dark';
   return {
     series: dark ? SERIES.dark : SERIES.light,
-    grid: dark ? '#2a2f39' : '#e8eaef',
-    axis: dark ? '#858c9b' : '#7a8091',
-    surface: dark ? '#171a20' : '#ffffff',
-    cursor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(16,24,40,0.05)',
+    grid: dark ? '#2d2b27' : '#e5e3dd',
+    axis: dark ? '#8f8b82' : '#6b675e',
+    surface: dark ? '#1a1917' : '#ffffff',
+    cursor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(27,26,23,0.05)',
   };
 }

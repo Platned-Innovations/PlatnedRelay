@@ -110,7 +110,7 @@ export class SettingsController {
     ]);
     const meta = await this.store.findById<any>(C.meta, 'install');
     return {
-      version: process.env.npm_package_version || '1.0.0', node: process.version, database: this.store.kind, masterKeyId: this.crypto.keyId,
+      version: process.env.npm_package_version || '1.1.0', node: process.version, database: this.store.kind, masterKeyId: this.crypto.keyId,
       rotationKeyLoaded: !!env.previousMasterKey, installedAt: meta?.value?.installedAt, uptimeSeconds: Math.round(process.uptime()),
       counts: { users, apps, keys, providers, models }, pid: process.pid,
     };
